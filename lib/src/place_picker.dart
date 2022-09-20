@@ -64,6 +64,7 @@ class PlacePicker extends StatefulWidget {
     this.hidePlaceDetailsWhenDraggingPin = true,
     this.backgroundAppBarColor = Colors.transparent,
     this.customTextField,
+    this.leading,
     required this.searchController,
     this.onPicked,
     this.animateZoom = 16,
@@ -174,6 +175,7 @@ class PlacePicker extends StatefulWidget {
 
   /// Whether to display appbar backbutton. Defaults to true.
   final bool automaticallyImplyAppBarLeading;
+  final Widget? leading;
 
   /// Will perform an autocomplete search, if set to true. Note that setting
   /// this to true, while providing a smoother UX experience, may cause
@@ -297,8 +299,9 @@ class _PlacePickerState extends State<PlacePicker> {
                 icon: Icon(
                   Platform.isIOS ? Icons.arrow_back_ios : Icons.arrow_back,
                 ),
-                padding: EdgeInsets.zero)
-            : SizedBox(width: 15),
+                padding: EdgeInsets.zero,
+              )
+            : widget.leading ?? SizedBox(),
         Expanded(
           child: AutoCompleteSearch(
             searchController: widget.searchController,
