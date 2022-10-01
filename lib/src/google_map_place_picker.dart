@@ -54,11 +54,13 @@ class GoogleMapPlacePicker extends StatelessWidget {
     this.defaultZoom = 15,
     this.showCurrentLocationIcon = false,
     this.customLocationButton,
+    this.overridedGeocodingLatLngRequest,
   }) : super(key: key);
 
   final LatLng initialTarget;
   final GlobalKey appBarKey;
 
+  final Future<PickResult?> Function(LatLng latLng)? overridedGeocodingLatLngRequest;
   final SelectedPlaceWidgetBuilder? selectedPlaceWidgetBuilder;
   final PinBuilder? pinBuilder;
 
@@ -98,6 +100,13 @@ class GoogleMapPlacePicker extends StatelessWidget {
     }
 
     provider.placeSearchingState = SearchingState.Searching;
+
+    if (overridedGeocodingLatLngRequest != null) {
+      PickResult? result = await overridedGeocodingLatLngRequest!(provider.cameraPosition!.target);
+      provider.selectedPlace = result;
+      provider.placeSearchingState = SearchingState.Idle;
+      return;
+    }
 
     final GeocodingResponse response = await provider.geocoding.searchByLocation(
       Location(lat: provider.cameraPosition!.target.latitude, lng: provider.cameraPosition!.target.longitude),

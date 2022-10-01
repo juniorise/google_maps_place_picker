@@ -9,7 +9,6 @@ import 'package:google_maps_place_picker/providers/place_provider.dart';
 import 'package:google_maps_place_picker/src/autocomplete_search.dart';
 import 'package:google_maps_place_picker/src/controllers/autocomplete_search_controller.dart';
 import 'package:google_maps_place_picker/src/google_map_place_picker.dart';
-import 'package:google_maps_place_picker/src/models/map_icon_position.dart';
 import 'package:google_maps_place_picker/src/utils/uuid.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:http/http.dart';
@@ -71,6 +70,9 @@ class PlacePicker extends StatefulWidget {
     this.defaultZoom = 15,
     this.showCurrentLocationIcon = false,
     this.customLocationButton,
+    this.overridedGeocodingLatLngRequest,
+    this.overridedGeocodingPlaceIdRequest,
+    this.overridedAutocompleteRequest,
   }) : super(key: key);
 
   final String apiKey;
@@ -80,6 +82,9 @@ class PlacePicker extends StatefulWidget {
   final LocationAccuracy desiredLocationAccuracy;
 
   final MapCreatedCallback? onMapCreated;
+  final Future<PickResult?> Function(LatLng latLng)? overridedGeocodingLatLngRequest;
+  final Future<PickResult?> Function(String placeId)? overridedGeocodingPlaceIdRequest;
+  final Future<PlacesAutocompleteResponse> Function(String searchTerm)? overridedAutocompleteRequest;
 
   final String? hintText;
   final String? searchingText;
@@ -304,6 +309,7 @@ class _PlacePickerState extends State<PlacePicker> {
             : widget.leading ?? SizedBox(),
         Expanded(
           child: AutoCompleteSearch(
+            overridedAutocompleteRequest: widget.overridedAutocompleteRequest,
             searchController: widget.searchController,
             appBarKey: appBarKey,
             searchBarController: searchBarController,
@@ -343,20 +349,24 @@ class _PlacePickerState extends State<PlacePicker> {
   _pickPrediction(Prediction prediction) async {
     provider!.placeSearchingState = SearchingState.Searching;
 
-    final PlacesDetailsResponse response = await provider!.places.getDetailsByPlaceId(
-      prediction.placeId!,
-      sessionToken: provider!.sessionToken,
-      language: widget.autocompleteLanguage,
-    );
+    if (widget.overridedGeocodingPlaceIdRequest != null) {
+      final result = await widget.overridedGeocodingPlaceIdRequest!(prediction.placeId!);
+      provider!.selectedPlace = result;
+    } else {
+      final PlacesDetailsResponse response = await provider!.places.getDetailsByPlaceId(
+        prediction.placeId!,
+        sessionToken: provider!.sessionToken,
+        language: widget.autocompleteLanguage,
+      );
 
-    if (response.errorMessage?.isNotEmpty == true || response.status == "REQUEST_DENIED") {
-      if (widget.onAutoCompleteFailed != null) {
-        widget.onAutoCompleteFailed!(response.status);
+      if (response.errorMessage?.isNotEmpty == true || response.status == "REQUEST_DENIED") {
+        if (widget.onAutoCompleteFailed != null) {
+          widget.onAutoCompleteFailed!(response.status);
+        }
+        return;
       }
-      return;
+      provider!.selectedPlace = PickResult.fromPlaceDetailResult(response.result);
     }
-
-    provider!.selectedPlace = PickResult.fromPlaceDetailResult(response.result);
 
     // Prevents searching again by camera movement.
     provider!.isAutoCompleteSearching = true;
@@ -441,6 +451,7 @@ class _PlacePickerState extends State<PlacePicker> {
       defaultZoom: widget.defaultZoom,
       showCurrentLocationIcon: widget.showCurrentLocationIcon,
       customLocationButton: widget.customLocationButton,
+      overridedGeocodingLatLngRequest: widget.overridedGeocodingLatLngRequest,
       onMyLocation: () async {
         // Prevent to click many times in short period.
         if (provider!.isOnUpdateLocationCooldown == false) {
