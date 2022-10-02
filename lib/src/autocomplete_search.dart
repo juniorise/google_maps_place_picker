@@ -102,32 +102,34 @@ class AutoCompleteSearchState extends State<AutoCompleteSearch> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: provider,
-      child: widget.customTextField ??
-          RoundedFrame(
-            height: widget.height,
-            padding: const EdgeInsets.only(right: 10),
-            color: Theme.of(context).brightness == Brightness.dark ? Colors.black54 : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            elevation: 8.0,
-            child: Row(
-              children: <Widget>[
-                SizedBox(width: 10),
-                Icon(Icons.search),
-                SizedBox(width: 10),
-                Expanded(child: _buildSearchTextField()),
-                _buildTextClearIcon(),
-              ],
+    return Focus(
+      focusNode: focus,
+      child: ChangeNotifierProvider.value(
+        value: provider,
+        child: widget.customTextField ??
+            RoundedFrame(
+              height: widget.height,
+              padding: const EdgeInsets.only(right: 10),
+              color: Theme.of(context).brightness == Brightness.dark ? Colors.black54 : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              elevation: 8.0,
+              child: Row(
+                children: <Widget>[
+                  SizedBox(width: 10),
+                  Icon(Icons.search),
+                  SizedBox(width: 10),
+                  Expanded(child: _buildSearchTextField()),
+                  _buildTextClearIcon(),
+                ],
+              ),
             ),
-          ),
+      ),
     );
   }
 
   Widget _buildSearchTextField() {
     return TextField(
       controller: widget.searchController,
-      focusNode: focus,
       decoration: InputDecoration(
         hintText: widget.hintText,
         border: InputBorder.none,
