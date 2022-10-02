@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -44,20 +45,50 @@ class PlaceProvider extends ChangeNotifier {
   bool isAutoCompleteSearching = false;
 
   Future<void> updateCurrentLocation(bool forceAndroidLocationManager) async {
+    bool? isGranted;
+
     try {
-      await Permission.location.request();
-      if (await Permission.location.request().isGranted) {
-        currentPosition = await Geolocator.getCurrentPosition(
-            desiredAccuracy: desiredAccuracy ?? LocationAccuracy.best);
+      if (kIsWeb) {
+        currentPosition = await _determinePosition();
       } else {
-        currentPosition = null;
+        isGranted = await Permission.location.request().isGranted;
+        if (isGranted == true) {
+          currentPosition =
+              await Geolocator.getCurrentPosition(desiredAccuracy: desiredAccuracy ?? LocationAccuracy.best);
+        } else {
+          currentPosition = null;
+        }
       }
     } catch (e) {
-      print(e);
+      print("ERROR: $e");
       currentPosition = null;
     }
 
     notifyListeners();
+  }
+
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error('Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    return await Geolocator.getCurrentPosition();
   }
 
   Position? _currentPoisition;
